@@ -1,7 +1,6 @@
 <?php
 
-include_once ('constants.php');
-include_once ('utilities.php');
+include_once ('core.php');
 
 $output = ['succeded' => true];
 $err = '';
@@ -18,22 +17,10 @@ try {
     if (!$user_id)
         throw new Exception("Wrong token.");
 
-if (isset($call_data['ok'])) {
-    $output['input'] = $call_data['ok'];    // debug
-} else {
-    $data = ['token' => $call_data['token'], 'ok' => get_curr_url()];
-    $res = curl_post(get_curr_url(), $data);
-    $output['back'] = $res;
-    $output['url'] = json_decode($res, true)['input'];
-    $dft = [];
-    $dft[17] = 'sfiga';
-    $dft[90] = 'paura';
-    $new = [];
-    $new[18] = 'digiottoooooooooo';
-    $new[90] = 'coraggio';
-    $new[100] = 'cento';
-    $output['array'] = $new + $dft;
-}       
+    if (empty($call_data['job'])) {
+/*******************************************************************************
+START JOB
+*******************************************************************************/
 
 
 
@@ -44,9 +31,33 @@ if (isset($call_data['ok'])) {
 
 
 
+    } else {
+        if (empty($call_data['job_id'])) {
+/*******************************************************************************
+JOB STATUS REQUEST
+*******************************************************************************/
 
 
 
+
+
+
+
+
+
+        } else {
+/*******************************************************************************
+INTERNAL CALL            
+*******************************************************************************/
+
+
+
+
+
+
+
+        }
+    }
 
 } catch (Exception $e) {
     if ($err)

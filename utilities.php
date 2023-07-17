@@ -129,18 +129,28 @@ function get_api_call_data() {
 
     if ($data) {
         $data = json_decode($data, true);
-        if ((!empty($data)) && isset($data['token']))
-            return $data;
-        $data = null;
+        if ((empty($data)) || (!isset($data['token'])))
+            $data = null;
     }
     
-    if (!$data) {
-        if ((!empty($_POST)) && isset($_POST['token']))
-            return $_POST;
-        return null;
+    if ((!$data) && (!empty($_POST)) && isset($_POST['token']))
+        $data = $_POST;
+    
+    if ($data && !((isset($data['job_id']) || isset($data['url']))))
+        $data = null;
+
+    if ($data && isset($data['url'])) {
+        if (isset($data['job']))
+            unset($data['job']);
     }
 
-    return null;
+    if ((!$data) && (!empty($_GET)) && isset($_GET['token'])) {
+        $data = $_GET;
+        if (isset($data['job_id']))
+            unset($data['job_id']);
+    }    
+
+    return $data;
 
 }
 
