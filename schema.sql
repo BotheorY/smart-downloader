@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS `bt_job_downloads` (
   `last_progress_datetime` timestamp NULL DEFAULT NULL,
   `state_change_datetime` timestamp NULL DEFAULT NULL,
   `last_err` text DEFAULT NULL,
+  `last_one` tinyint(3) unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY (`id_bt_job_downloads`),
   KEY `id_bt_job_downloads` (`id_bt_job_downloads`),
   KEY `id_bt_job` (`id_bt_job`),

@@ -2,7 +2,6 @@
 
 include_once ('constants.php');
 
-
 function ab_log($log) {
 	
 	$now = date('[d/m/Y H:i:s] ');
@@ -74,25 +73,6 @@ function get_env_var($var_name, $raise_err = true) {
 
 }
 
-function db_down_connect() {
-
-	$db_name = get_env_var('BT_API_DOWN_DB_NAME');
-	$db_password = get_env_var('BT_API_DOWN_DB_PWD');
-	$db_host = get_env_var('BT_API_DOWN_DB_HOST');
-	$db_user = get_env_var('BT_API_DOWN_DB_USER');
-
-    $conn = new mysqli($db_host, $db_user, $db_password, $db_name);
-
-    if ($conn->connect_error) {
-		throw new Exception("Connection to database failed: " . $conn->connect_error);
-    } else {
-        return $conn;
-    }
-
-    return null;
-    
-}
-
 function db_admin_connect() {
 
 	$db_name = get_env_var('BT_API_DB_NAME');
@@ -112,15 +92,15 @@ function db_admin_connect() {
     
 }
 
-function get_max_execution_time() {
+function get_max_execution_time(): int {
 
-    $maxExecutionTime = ini_get('max_execution_time');
+    $max_execution_time = (int)ini_get('max_execution_time');
 
-    if ($maxExecutionTime !== false)
-        $maxExecutionTime = (int)$maxExecutionTime;
-    
-    return $maxExecutionTime;
-  
+    if (!$max_execution_time)
+        $max_execution_time = DFT_MAX_EXECUTION_TIME;
+
+    return $max_execution_time;
+
 }
 
 function get_api_call_data() {
@@ -140,8 +120,8 @@ function get_api_call_data() {
         $data = null;
 
     if ($data && isset($data['url'])) {
-        if (isset($data['job']))
-            unset($data['job']);
+        if (isset($data['key']))
+            unset($data['key']);
     }
 
     if ((!$data) && (!empty($_GET)) && isset($_GET['token'])) {
@@ -256,4 +236,23 @@ function get_curr_url() {
     $scriptPath = $_SERVER['SCRIPT_NAME'];
     return $protocol . $domainName . $scriptPath;
 
+}
+
+function normalize_sql_str(string $value, $db): string {
+
+    return mysqli_real_escape_string($db, stripslashes($value));
+
+}
+
+function get_file_size(string $url): ?int {
+
+    try {
+        $headers = get_headers($url, 1);
+        if (isset($headers['Content-Length']))
+            return (int)$headers['Content-Length'];
+        return null;
+    } catch (Exception $e) {
+        return null;
+    }
+        
 }
