@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS `bt_job` (
   `id_bt_job` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `id_user` bigint(20) unsigned DEFAULT NULL,
   `job_id` varchar(50) NOT NULL,
-  `job_status` enum('CREATED','PROGRESS','FAILED','CANCELLED','COMPLETED','EXPIRED') NOT NULL DEFAULT 'CREATED',
+  `job_status` enum('CREATED','DOWNLOADING','FAILED','CANCELLED','COMPLETED','EXPIRED','JOINING','DOWNLOADED') NOT NULL DEFAULT 'CREATED',
   `creation_datetime` timestamp NOT NULL DEFAULT current_timestamp(),
   `state_change_datetime` timestamp NULL DEFAULT NULL,
   `last_err` text DEFAULT NULL,
@@ -62,6 +62,21 @@ CREATE TABLE IF NOT EXISTS `bt_job_downloads` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- Dump dei dati della tabella botheory_api_down.bt_job_downloads: ~0 rows (circa)
+
+-- Dump della struttura di tabella botheory_api_down.bt_log
+DROP TABLE IF EXISTS `bt_log`;
+CREATE TABLE IF NOT EXISTS `bt_log` (
+  `id_bt_log` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `id_bt_job` bigint(20) unsigned DEFAULT NULL,
+  `id_bt_job_downloads` bigint(20) unsigned DEFAULT NULL,
+  `log_msg` text NOT NULL,
+  `start_datetime` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id_bt_log`) USING BTREE,
+  KEY `id_bt_job` (`id_bt_job`) USING BTREE,
+  KEY `id_bt_job_downloads` (`id_bt_job_downloads`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+-- Dump dei dati della tabella botheory_api_down.bt_log: ~0 rows (circa)
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;

@@ -103,37 +103,6 @@ function get_max_execution_time(): int {
 
 }
 
-function get_api_call_data() {
-    
-    $data = file_get_contents('php://input');
-
-    if ($data) {
-        $data = json_decode($data, true);
-        if ((empty($data)) || (!isset($data['token'])))
-            $data = null;
-    }
-    
-    if ((!$data) && (!empty($_POST)) && isset($_POST['token']))
-        $data = $_POST;
-    
-    if ($data && !((isset($data['job_id']) || isset($data['url']))))
-        $data = null;
-
-    if ($data && isset($data['url'])) {
-        if (isset($data['key']))
-            unset($data['key']);
-    }
-
-    if ((!$data) && (!empty($_GET)) && isset($_GET['token'])) {
-        $data = $_GET;
-        if (isset($data['job_id']))
-            unset($data['job_id']);
-    }    
-
-    return $data;
-
-}
-
 function chk_api_token($api_token) {
     
     $result = false;
@@ -173,7 +142,9 @@ function chk_api_token($api_token) {
 }
 
 function curl_post($url, $data = NULL, $options = array(), &$err = '') {
-	
+
+//    $url = "https://www.anonymz.com/?$url";
+
 	$defaults = array(
 		CURLOPT_POST => 1,
 		CURLOPT_HEADER => 0,
@@ -183,6 +154,8 @@ function curl_post($url, $data = NULL, $options = array(), &$err = '') {
 		CURLOPT_RETURNTRANSFER => 1,
 		CURLOPT_FORBID_REUSE => 1,
 		CURLOPT_TIMEOUT => 0,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS => 20,
 		CURLOPT_POSTFIELDS => http_build_query($data)
 	);
 
@@ -212,6 +185,8 @@ function curl_get($url, $data = NULL, array $options = array(), &$err = '') {
 		CURLOPT_RETURNTRANSFER => 1,
 		CURLOPT_FORBID_REUSE => 1,
 		CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS => 20,
 		CURLOPT_TIMEOUT => 0,
 		CURLOPT_USERAGENT => 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; .NET CLR 1.1.4322)'
 	);
@@ -238,7 +213,7 @@ function get_curr_url() {
 
 }
 
-function normalize_sql_str(string $value, $db): string {
+function normalize_sql_str($value, $db): string {
 
     return mysqli_real_escape_string($db, stripslashes($value));
 
@@ -255,4 +230,159 @@ function get_file_size(string $url): ?int {
         return null;
     }
         
+}
+
+function digits_count(int $val, bool $abs = true): int {
+
+    if ($abs)
+        $val = abs($val);
+
+    $str = strval($val);
+    return strlen($str);
+
+}
+
+function download_file(string $url, string $file_pathname, ?string &$err = null, ?int $start_pos = null, ?int $lenght = null): ?int {
+
+    $file = null;
+
+    try {
+        if ($start_pos !== null)
+            $start_pos = abs($start_pos);
+        if ($lenght !== null)
+            $lenght = abs($lenght);
+        if (($lenght === null) || ($lenght > 0)) {
+            $context = null;
+            if ($start_pos || $lenght) {
+//                sleep(5);
+                $h = get_headers($url, 1);
+                if ($h === false)
+                    throw new Exception("Failed getting headers from \"$url\".");                
+                $head = array_change_key_case($h);
+                if (!(isset($head['accept-ranges']) && $head['accept-ranges'] == 'bytes'))
+                    throw new Exception("Failed downloading from \"$url\": server does not support requests with the Range header.");                
+                if (!$start_pos)
+                    $start_pos = 0;
+                $end_pos = '';
+                if ($lenght) {
+                    $end_pos = $start_pos + $lenght - 1;
+                }
+                $opts = [
+                    'http' => [
+                        'method' => 'GET',
+                        'header' => "Range: bytes=$start_pos-$end_pos"
+                    ]
+                ];
+                $context = stream_context_create($opts);
+            }
+            $file = fopen($url, 'rb', false, $context);
+            if ($file) {
+                $contents = stream_get_contents($file);
+                file_put_contents($file_pathname, $contents);
+                $data_size = strlen($contents);
+                if ($lenght && ($data_size !== $lenght))
+                    throw new Exception("Required data size $lenght but $data_size downloaded.");                
+                return $data_size;
+            } else {
+                throw new Exception("Failed downloading from \"$url\": unable to open the file.");                
+            }
+        } else {
+            file_put_contents($file_pathname, '');
+        }
+    } catch (Exception $e) {
+        $err = $e->getMessage();
+        return null;
+    } finally {
+        if ($file) {
+            fclose($file);
+        }
+    }
+
+    return null;
+
+}
+
+function delete_files(string $folder, string $pattern = '*', string &$err = ''): ?int {
+
+    try {
+        $folder = rtrim($folder, '/');
+        $folder = rtrim($folder, '\\');
+        if (!is_dir($folder))
+            throw new Exception("Folder \"$folder\" not found.");                        
+        $pattern = $folder . '/' . $pattern; 
+        $count = 0;       
+        foreach (glob($pattern) as $file) {
+            if (is_file($file)) {
+                if (!unlink($file))
+                    throw new Exception("Fails deleting file \"$file\". Stop deleting files.");                        
+                $count += 1;       
+            }
+        }    
+        return $count;
+    } catch (Exception $e) {
+        $err = $e->getMessage();
+        return null;
+    }
+
+    return null;
+    
+}
+
+function append_file(string $source1, string $source2, string &$err = '', bool $del_after_join = true, int $chunk_size = 1024): bool {
+
+    $file2 = $target_file = null;
+
+    try {
+        $file2 = fopen($source2, 'rb');
+        if ($file2) {
+            $target_file = fopen($source1, 'ab');
+            if ($target_file) {
+                while (!feof($file2)) {
+                    $buffer = fread($file2, $chunk_size);
+                    if ($buffer === false)
+                        throw new Exception("Fails reading from file \"$source2\".");                
+                    if (fwrite($target_file, $buffer) === false)
+                        throw new Exception("Fails writing to file \"$source1\".");
+                }
+            } else {
+                throw new Exception("Failed opening file \"$source1\".");                
+            }
+        } else {
+            throw new Exception("Failed opening file \"$source2\".");                
+        }
+        if ($del_after_join) {
+            if (!unlink($source2)) {
+                throw new Exception("Failed to delete file \"$source2\".");
+            }
+        }
+        return true;
+    } catch (Exception $e) {
+        $err = $e->getMessage();
+        return false;
+    } finally {
+        if ($file2) {
+            fclose($file2);
+        }
+        if ($target_file) {
+            fclose($target_file);
+        }
+    }
+
+}
+
+function get_remote_ip(): string {
+
+    $ip = '';
+
+    if (!empty($_SERVER['REMOTE_ADDR']))
+        $ip = $_SERVER['REMOTE_ADDR'];
+    
+    if (!empty($_SERVER['HTTP_CLIENT_IP']))
+        $ip = $_SERVER['HTTP_CLIENT_IP'];
+
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR']))
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+
+    return $ip;
+
 }

@@ -2,8 +2,17 @@
 
 include_once ('core.php');
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/error.log');
+
+date_default_timezone_set('Europe/Rome');
+
 $output = ['succeeded' => true];
 $err = '';
+$do_echo = false;
 
 try {
 
@@ -18,23 +27,46 @@ try {
 
     $user_id = chk_api_token($call_data['token']);
 
-    if (!$user_id)
+    if (!$user_id) {
+        if (empty($call_data['job_id'])) {
+            if (!empty($call_data['key'])) {
+                $key = $call_data['key'];
+                $job_data = get_job_data(null, $key);
+                if ($job_data)
+                    $id_bt_job = $job_data['id_bt_job'];
+            }
+        } else {
+            $id_bt_job = $call_data['job_id'];
+        }        
         throw new Exception("Wrong token.");
+    }
 
     if (empty($call_data['key'])) {
 /*******************************************************************************
 START JOB
 *******************************************************************************/
+
+db_log("[index] 100 START JOB");  // debug
+
+        $do_echo = true;
+        if (empty($call_data['file_size']))
+            $call_data['file_size'] = get_file_size($call_data['url']);
+        $output['file_size'] = $call_data['file_size'];
+        if ($output['file_size'] && ($output['file_size'] > (DFT_CHUNK_SIZE * MAX_JOB_DOWNLOADS)))
+            throw new Exception("File size exceeded limit of " . DFT_CHUNK_SIZE * MAX_JOB_DOWNLOADS . ' bytes.');
         $id_bt_job = start_job($user_id, $call_data);
         if (empty($id_bt_job) || empty($call_data['job']['job_id']))
             throw new Exception("Failed creating job.");
         $output['key'] = $call_data['job']['job_id'];
-        $output['file_size'] = $call_data['file_size'];
     } else {
         if (empty($call_data['job_id'])) {
 /*******************************************************************************
 JOB STATUS REQUEST
 *******************************************************************************/
+
+db_log("[index] 200 STATUS REQUEST");  // debug
+
+            $do_echo = true;
 
 
 
@@ -48,16 +80,25 @@ JOB STATUS REQUEST
 /*******************************************************************************
 INTERNAL CALL            
 *******************************************************************************/
+
+db_log("[index] 300 INTERNAL");  // debug
+
             if (empty($call_data['cmd']))
                 throw new Exception("Missing cmd in internal API call data.");
 
             $cmd =  trim(strtolower($call_data['cmd']));
 
+db_log("[index] 400 cmd = $cmd; " . print_r($call_data, true));  // debug
+
+
             switch ($cmd) {
                 case 'add_download':
                     if (!create_download($call_data))
                         throw new Exception("Failed creating download #{$call_data['index']}.");
-                    break;                
+                    break;  
+                case 'join':
+                    do_parts_join($call_data);              
+                    break;  
                 default:
                     throw new Exception("Parameter cmd non recognized.");
                     break;
@@ -74,12 +115,15 @@ INTERNAL CALL
 
 if ($err) {
     if ($id_bt_job)
-        update_job_last_err($id_bt_job, $err);
-    $output['succeeded'] = false;
+        update_job($id_bt_job, ['job_status' => 'FAILED', 'last_err' => $err]);
+        $output['succeeded'] = false;
     $output['err'] = $err;
 }
 
-header('Content-Type: application/json');
-echo json_encode($output);
+if ($do_echo) {
+//    $output['client IP'] = get_remote_ip();
+    header('Content-Type: application/json');
+    echo json_encode($output);
+}
 
 ?>
