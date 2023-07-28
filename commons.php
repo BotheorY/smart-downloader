@@ -90,8 +90,45 @@ function update_job(int $id, array $data) {
 
     $sql_datetime = date("Y-m-d H:i:s");
 
-    if (array_key_exists('job_status', $data))
+    if (array_key_exists('job_status', $data)) {
         $data['state_change_datetime'] = $sql_datetime;
+        switch ($data['job_status']) {
+            case 'FAILED':
+                $job_data = get_job_data($id);
+                if ($job_data) {
+                    $cbck_data =     [
+                        'msg' => "Download failed at " . get_mysql_datetime(), 
+                        'key' => $job_data['job_id'], 
+                        'url' => $job_data['file_url'], 
+                        'creation_datetime' => $job_data['creation_datetime'], 
+                        'err' => $job_data['last_err'], 
+                        'ext' => $job_data['file_ext'], 
+                        'file_name' => $job_data['file_name']
+                    ];
+                    send_callback($id, $cbck_data);
+                }            
+                break;
+            case 'COMPLETED':
+                $job_data = get_job_data($id);
+                if ($job_data) {
+                    $download_url = get_download_fld_url() . "/{$job_data['job_id']}";
+                    if ($job_data['file_ext'])
+                        $download_url .= '.' . $job_data['file_ext'];
+                    $cbck_data =     [
+                        'msg' => "Download completed at " . get_mysql_datetime(), 
+                        'key' => $job_data['job_id'], 
+                        'url' => $job_data['file_url'], 
+                        'download_url' => $download_url, 
+                        'creation_datetime' => $job_data['creation_datetime'], 
+                        'err' => $job_data['last_err'], 
+                        'ext' => $job_data['file_ext'], 
+                        'file_name' => $job_data['file_name']
+                    ];
+                    send_callback($id, $cbck_data);
+                }            
+                break;
+        }
+    }
     
     $db = db_down_connect();
 
@@ -256,8 +293,8 @@ function delete_job(int $id): bool {
             $db->autocommit(false);
             if ($db->query("DELETE FROM bt_job_downloads WHERE id_bt_job = $id")) {
                 if ($db->query("DELETE FROM bt_job WHERE id_bt_job = $id")) {
-                    $db->commit();   
                     delete_files(FILES_FOLDER_NAME, "{$key}*");         
+                    $db->commit();   
                     return true;
                 }
             }
@@ -370,5 +407,43 @@ return false;
     }
 
     return false;
+
+}
+
+function send_callback(int $id_job, ?array $data = null) {
+
+    $job_data = get_job_data($id_job);
+
+    if ($job_data) {
+        $url = $job_data['callback_url'];
+        if ($url && filter_var($url, FILTER_VALIDATE_URL)) {
+            $callback_type = $job_data['callback_url'];
+            if ($callback_type === 'PUT')   // PUT method not yet supported
+                return false;
+            if (!$callback_type)
+                $callback_type = 'POST';
+            if (!$data)
+                $data = [];
+            $extra_data = $job_data['callback_extra_data'];
+            if ($extra_data) {
+                $extra_data = json_decode($extra_data, true);
+                if (empty($extra_data))
+                    $extra_data = [];
+            } else {
+                $extra_data = [];
+            }
+            $data = $extra_data + $data;
+            if ($callback_type === 'GET')
+                curl_get($url, $data, [[CURLOPT_RETURNTRANSFER => 0, CURLOPT_TIMEOUT => 3]]);
+            if ($callback_type === 'POST')
+                curl_post($url, $data, [[CURLOPT_RETURNTRANSFER => 0, CURLOPT_TIMEOUT => 3]]);
+        }
+    }
+
+}
+
+function get_download_fld_url(): string {
+
+    return dirname(get_curr_url()) . '/' . FILES_FOLDER_NAME;
 
 }

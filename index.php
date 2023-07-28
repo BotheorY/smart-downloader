@@ -12,15 +12,14 @@ date_default_timezone_set('Europe/Rome');
 
 $output = ['succeeded' => true];
 $err = '';
-$do_echo = false;
+$do_echo = true;
+$call_data = null;
+$internal_call = false;
 
 try {
 
     $id_bt_job = null;
     $call_data = get_api_call_data();
-
-//ab_log(print_r($call_data, true));
-
 
     if (!$call_data)
         throw new Exception("Data sent is incomplete or incorrect.");
@@ -48,7 +47,6 @@ START JOB
 
 db_log("[index] 100 START JOB");  // debug
 
-        $do_echo = true;
         $ext = '';
         $file_size = get_file_size($call_data['url'], $ext);
         if ($ext && empty($call_data['ext']))
@@ -70,7 +68,6 @@ JOB STATUS REQUEST
 
 db_log("[index] 200 STATUS REQUEST");  // debug
 
-            $do_echo = true;
 
 
 
@@ -86,6 +83,9 @@ INTERNAL CALL
 *******************************************************************************/
 
 db_log("[index] 300 INTERNAL");  // debug
+
+            $internal_call = true;
+            $do_echo = false;
 
             if (empty($call_data['cmd']))
                 throw new Exception("Missing cmd in internal API call data.");
@@ -103,6 +103,9 @@ db_log("[index] 400 cmd = $cmd; " . print_r($call_data, true));  // debug
                 case 'join':
                     do_parts_join($call_data);              
                     break;  
+                case 'remove_expired':
+                    do_remove_expired_jobs();              
+                    break;  
                 default:
                     throw new Exception("Parameter cmd non recognized.");
                     break;
@@ -115,12 +118,15 @@ db_log("[index] 400 cmd = $cmd; " . print_r($call_data, true));  // debug
     if ($err)
         $err .= " \n";
     $err .= $e->getMessage();
+} finally {
+    if ($call_data && $internal_call)
+        start_remove_expired_jobs($call_data);
 }
 
 if ($err) {
     if ($id_bt_job)
         update_job($id_bt_job, ['job_status' => 'FAILED', 'last_err' => $err]);
-        $output['succeeded'] = false;
+    $output['succeeded'] = false;
     $output['err'] = $err;
 }
 

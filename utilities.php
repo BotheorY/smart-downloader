@@ -395,3 +395,20 @@ function get_remote_ip(): string {
     return $ip;
 
 }
+
+function get_mysql_datetime(?int $seconds_diff = null): string {
+
+    $ora = new DateTime();
+    
+    if ($seconds_diff) {
+        if ($seconds_diff < 0) {
+            $seconds_diff = (int)abs($seconds_diff);
+            $ora->modify("-{$seconds_diff} seconds");
+        } else {
+            $ora->modify("+{$seconds_diff} seconds");
+        }
+    }
+    
+    return $ora->format('Y-m-d H:i:s');
+            
+}

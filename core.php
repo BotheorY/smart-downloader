@@ -250,6 +250,8 @@ db_log("[do_download] 100 " . print_r($data, true), $id_download);  // debug
 
     try {
         $download_data = get_download_data($id_download);
+        if (!$download_data)
+            return false;
         $job_data = get_job_data($download_data['id_bt_job']);
         $url = $job_data['file_url'];
         $index = $download_data['part_index'];
@@ -287,6 +289,55 @@ function start_parts_join($data) {
 
     $data['cmd'] = 'join';
     curl_post(get_curr_url(), $data, [CURLOPT_RETURNTRANSFER => 0, CURLOPT_TIMEOUT => 5], $err);
+
+}
+
+
+function start_remove_expired_jobs($data) {
+
+    $data['cmd'] = 'remove_expired';
+    curl_post(get_curr_url(), $data, [CURLOPT_RETURNTRANSFER => 0, CURLOPT_TIMEOUT => 1], $err);
+
+}
+
+function do_remove_expired_jobs() {
+
+    $db = db_down_connect();
+
+    if ($db) {
+        try {
+            $limit_datetime = get_mysql_datetime(MAX_JOB_LIFE_TIME * (-1));
+            $sql = "SELECT * FROM bt_job WHERE (job_status = 'EXPIRED') OR (creation_datetime < '$limit_datetime') ORDER BY id_bt_job ASC";
+            $queryres = $db->query($sql);
+            if ($queryres) {
+                try {
+                    while ($row = $queryres->fetch_assoc()) {
+                        $id_job = $row['id_bt_job'];
+                        if (!($row['job_status'] === 'EXPIRED')) {
+                            update_job($id_job, ['job_status' => 'EXPIRED']);
+                            $data =     [
+                                            'msg' => "Download expired at $limit_datetime", 
+                                            'key' => $row['job_id'], 
+                                            'url' => $row['file_url'], 
+                                            'creation_datetime' => $row['creation_datetime'], 
+                                            'err' => $row['last_err'], 
+                                            'ext' => $row['file_ext'], 
+                                            'file_name' => $row['file_name']
+                                        ];
+                            send_callback($id_job, $data);
+                        }
+                        delete_job($id_job);
+                    }    
+                } finally {
+                    $queryres->free();
+                }
+            }
+        } finally {
+            $db->close();
+        }
+    } else {
+        throw new Exception("Downloads DB connection failed");
+    }    
 
 }
 
