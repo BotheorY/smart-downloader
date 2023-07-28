@@ -20,7 +20,19 @@ function create_job(int $id_user, array $data): ?int {
             $path = parse_url($res, PHP_URL_PATH);
             $file_info = pathinfo($path);
             $file_name = '"' . normalize_sql_str($file_info['basename'], $db) . '"';
-            $file_ext = '"' . normalize_sql_str($file_info['extension'], $db) . '"';
+            $file_ext = 'NULL';
+            if (empty($file_info['extension'])) {
+                if (!empty($data['ext'])) {
+                    $ext = trim($data['ext']);
+                    if ($ext[0] === '.') {
+                        $ext = trim(substr($ext, 1));
+                    }
+                    if ($ext)
+                        $file_ext = '"' . normalize_sql_str($ext, $db) . '"';
+                }
+            } else {
+                $file_ext = '"' . normalize_sql_str($file_info['extension'], $db) . '"';
+            }
             $job_id = '"' . get_uuid() . '"';
             $callback_url = 'NULL';
             $callback_extra_data = 'NULL';

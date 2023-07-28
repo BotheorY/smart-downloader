@@ -49,8 +49,12 @@ START JOB
 db_log("[index] 100 START JOB");  // debug
 
         $do_echo = true;
+        $ext = '';
+        $file_size = get_file_size($call_data['url'], $ext);
+        if ($ext && empty($call_data['ext']))
+            $call_data['ext'] = $ext;
         if (empty($call_data['file_size']))
-            $call_data['file_size'] = get_file_size($call_data['url']);
+            $call_data['file_size'] = $file_size;
         $output['file_size'] = $call_data['file_size'];
         if ($output['file_size'] && ($output['file_size'] > (DFT_CHUNK_SIZE * MAX_JOB_DOWNLOADS)))
             throw new Exception("File size exceeded limit of " . DFT_CHUNK_SIZE * MAX_JOB_DOWNLOADS . ' bytes.');

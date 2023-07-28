@@ -219,12 +219,19 @@ function normalize_sql_str($value, $db): string {
 
 }
 
-function get_file_size(string $url): ?int {
+function get_file_size(string $url, ?string &$ext = null): ?int {
 
     try {
         $headers = get_headers($url, 1);
-        if (isset($headers['Content-Length']))
-            return (int)$headers['Content-Length'];
+        if ($headers !== false) {
+            if (isset($headers['Content-Type'])) {
+                $res = explode('/', $headers['Content-Type']);
+                if (is_array($res) && (count($res) > 1) && trim($res[1]))
+                    $ext = trim($res[1]);
+            }
+            if (isset($headers['Content-Length']))
+                return (int)$headers['Content-Length'];
+        }
         return null;
     } catch (Exception $e) {
         return null;
@@ -253,8 +260,10 @@ function download_file(string $url, string $file_pathname, ?string &$err = null,
             $lenght = abs($lenght);
         if (($lenght === null) || ($lenght > 0)) {
             $context = null;
+
+//sleep(5);
+
             if ($start_pos || $lenght) {
-//                sleep(5);
                 $h = get_headers($url, 1);
                 if ($h === false)
                     throw new Exception("Failed getting headers from \"$url\".");                
