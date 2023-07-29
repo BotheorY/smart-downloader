@@ -1,19 +1,6 @@
 <?php
 
 /*==============================================================================
-RELEASE TYPE
-==============================================================================*/
-/* defined('RELEASE_TARGET') OR define('RELEASE_TARGET', 'prod');	*/
-defined('RELEASE_TARGET') OR define('RELEASE_TARGET', 'dev');
-
-if (trim(strtolower(RELEASE_TARGET)) === 'dev')
-	require_once('config/dev/settings.php');	
-if (trim(strtolower(RELEASE_TARGET)) === 'test')
-	require_once('config/test/settings.php');		
-if (trim(strtolower(RELEASE_TARGET)) === 'prod')
-	require_once('config/prod/settings.php');	
-
-/*==============================================================================
 CONSTANTS
 ==============================================================================*/
 defined('MAX_SIMULTANEOUS_JOBS') OR define('MAX_SIMULTANEOUS_JOBS', 10);

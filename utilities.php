@@ -2,6 +2,8 @@
 
 include_once ('constants.php');
 
+$conn_admin = null;
+
 function ab_log($log) {
 	
 	$now = date('[d/m/Y H:i:s] ');
@@ -73,22 +75,21 @@ function get_env_var($var_name, $raise_err = true) {
 
 }
 
-function db_admin_connect() {
+function db_admin_connect(): ?mysqli {
 
-	$db_name = get_env_var('BT_API_DB_NAME');
-	$db_password = get_env_var('BT_API_DB_PWD');
-	$db_host = get_env_var('BT_API_DB_HOST');
-	$db_user = get_env_var('BT_API_DB_USER');
+    global $conn_admin;
 
-    $conn = new mysqli($db_host, $db_user, $db_password, $db_name);
-
-    if ($conn->connect_error) {
-		throw new Exception("Connection to database failed: " . $conn->connect_error);
+    $db_name = get_env_var('BT_API_DB_NAME');
+    $db_password = get_env_var('BT_API_DB_PWD');
+    $db_host = get_env_var('BT_API_DB_HOST');
+    $db_user = get_env_var('BT_API_DB_USER');
+    $conn_admin = new mysqli($db_host, $db_user, $db_password, $db_name);
+    if ($conn_admin->connect_error) {
+        throw new Exception("Connection to database failed: " . $conn_admin->connect_error);
     } else {
-        return $conn;
+        return $conn_admin;
     }
-
-    return null;
+    return null;    
     
 }
 

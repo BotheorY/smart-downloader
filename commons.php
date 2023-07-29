@@ -2,6 +2,8 @@
 
 include_once ('utilities.php');
 
+$conn = null;
+
 function get_api_call_data() {
     
     $data = file_get_contents('php://input');
@@ -223,21 +225,20 @@ function get_download_data(int $id): ?array {
     
 }
 
-function db_down_connect() {
+function db_down_connect(): ?mysqli {
 
-	$db_name = get_env_var('BT_API_DOWN_DB_NAME');
-	$db_password = get_env_var('BT_API_DOWN_DB_PWD');
-	$db_host = get_env_var('BT_API_DOWN_DB_HOST');
-	$db_user = get_env_var('BT_API_DOWN_DB_USER');
+    global $conn;
 
+    $db_name = get_env_var('BT_API_DOWN_DB_NAME');
+    $db_password = get_env_var('BT_API_DOWN_DB_PWD');
+    $db_host = get_env_var('BT_API_DOWN_DB_HOST');
+    $db_user = get_env_var('BT_API_DOWN_DB_USER');
     $conn = new mysqli($db_host, $db_user, $db_password, $db_name);
-
     if ($conn->connect_error) {
-		throw new Exception("Connection to database failed: " . $conn->connect_error);
+        throw new Exception("Connection to database failed: " . $conn->connect_error);
     } else {
         return $conn;
     }
-
     return null;
     
 }
@@ -417,7 +418,7 @@ function send_callback(int $id_job, ?array $data = null) {
     if ($job_data) {
         $url = $job_data['callback_url'];
         if ($url && filter_var($url, FILTER_VALIDATE_URL)) {
-            $callback_type = $job_data['callback_url'];
+            $callback_type = $job_data['callback_type'];
             if ($callback_type === 'PUT')   // PUT method not yet supported
                 return false;
             if (!$callback_type)

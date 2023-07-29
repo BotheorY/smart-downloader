@@ -19,6 +19,7 @@ if (chk_data()) {
     $UserToken = $_POST['UserToken'];
     $token = get_token($UserKey, $UserToken);
     $URL = $_POST['URL'];
+    $CallbackURL = $_POST['CallbackURL'];
     $CallbackMethod = $_POST['CallbackMethod'];
     if (!empty($_POST['CallbackExtraData']))
         $CallbackExtraData = $_POST['CallbackExtraData'];
@@ -225,7 +226,7 @@ if (chk_data()) {
                     let token = '<?= $token ?>';
                     let url = $("#URL").val();
                     let callbackURL = $("#CallbackURL").val();
-                    let callbackExtraData = $("#CallbackExtraData").val();
+                    let callbackExtraData = $("#CallbackExtraData").html();
                     let callbackMethod = $("#CallbackMethod").val();
                     $("#wait-div").show();
 
@@ -234,7 +235,7 @@ if (chk_data()) {
                             url: '../',
                             type: 'POST',
                             async: true,
-                            data: 'token=' + token + '&url=' + url,
+                            data: 'token=' + token + '&url=' + url + '&callback=' + callbackURL + '&callbackData=' + callbackExtraData + '&callbackType=' + callbackMethod,
                             dataType: 'json',
                             success: function(data) {
                                 if (data['succeeded']) {
