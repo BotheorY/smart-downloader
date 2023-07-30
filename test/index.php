@@ -125,16 +125,31 @@ if (chk_data()) {
             <div id="prgDiv" style="display: none;">
                 <div id="infoDiv">
                     <center><h3>Response and Progress</h3></center>
-                    <p><strong>Key:</strong> <span id="key"></span></p>
-                    <p><strong>File size:</strong> <span id="fileSize"></span></p>
-                    <p><strong>Status:</strong> <span id="status"></span></p>
-                    <p><strong>Error:</strong> <span id="error"></span></p>
-                    <p><strong>Progress:</strong> <span id="progress"></span></p>
+                    <div style="font-family: 'Courier New', Courier, monospace;">
+                        <p><strong>Key:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong> <span id="key"></span></p>
+                        <p><strong>File name:</strong> <span id="fName"></span></p>
+                        <p><strong>File size:</strong> <span id="fileSize"></span></p>
+                        <p><strong>File URL:&nbsp;</strong> <span id="fURL"></span></p>
+                        <p><strong>Status:&nbsp;&nbsp;&nbsp;</strong> <span id="status"></span></p>
+                        <p><strong>Error:&nbsp;&nbsp;&nbsp;&nbsp;</strong> <span id="error"></span></p>
+                        <p><strong>Progress:&nbsp;</strong> <span id="progressVal"></span></p>
+
+                        <div class="progress" style="height: 3em; margin-bottom: 1.5em; margin-top: -1em;">
+                            <div id="progress" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                <strong id="progressPercentage"></strong>
+                            </div>
+                        </div>
+
+                        <p><strong>Download:&nbsp;</strong> <span id="fDown"></span></p>
+                    </div>
                 </div>
             </div>
 
+<?php if ($in_progress) { ?>
             <br>
             <center><button type="button" class="btn btn-primary" id="refreshBtn" onClick="window.location.href = '<?php echo get_curr_url(); ?>'">Restart</button></center>
+<?php } ?>
+
             <br>
 
         </div>
@@ -144,6 +159,10 @@ if (chk_data()) {
         <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
 
         <script>
+
+            var intervalId = null;    
+            var key = null;            
+
             $(document).ready(function() {
 
 <?php if ($in_progress) { ?>
@@ -221,6 +240,59 @@ if (chk_data()) {
 
                 }
 
+                function updatePrg() {
+
+                    let token = '<?= $token ?>';
+
+                    $.ajax (
+                        {
+                            url: '../',
+                            type: 'POST',
+                            async: true,
+                            data: 'token=' + token + '&key=' + key,
+                            dataType: 'json',
+                            success: function(data) {
+                                if (data['succeeded']) {
+                                    $("#key").html(key);
+                                    $("#fileSize").html(data['file_size']);
+                                    $status = data['status'];
+                                    $("#status").html($status);
+                                    $("#error").html(data['err']);
+                                    $("#progressVal").html(data['downloaded']);
+
+                                    // Calculate the percentage of the file downloaded
+                                    let progress = (data['downloaded'] / data['file_size']) * 100;
+
+                                    // Set the width and aria-valuenow of the progress bar
+                                    $("#progress").css("width", progress + "%").attr("aria-valuenow", progress);
+
+                                    // Set the text of the progress percentage span
+                                    $("#progressPercentage").html(Math.round(progress) + "%");
+
+                                    $("#fName").html(data['file_name']);
+                                    $("#fName").html(data['file_name']);
+                                    let downloadURL = data['download_url'].trim();
+                                    if (downloadURL) {
+                                        downloadURL = '<a href="' + downloadURL + '" target="_blank">' + downloadURL + '</a>';
+                                    }
+                                    $("#fDown").html(downloadURL);
+                                    if(($status == 'COMPLETED') || ($status == 'FAILED') || ($status == 'EXPIRED') || ($status == 'CANCELLED')) {
+                                        clearInterval(intervalId);
+                                    }
+                                } else {
+                                    clearInterval(intervalId);
+                                    alert("Errore: " + data['err']);
+                                }
+                            },
+                            error: function(xhr) {
+                                clearInterval(intervalId);
+                                alert("Errore: " + xhr.status + " " + xhr.statusText);
+                            }
+                        }
+                    );
+                    
+                }
+
                 function sendDataToServer() {
 
                     let token = '<?= $token ?>';
@@ -239,13 +311,11 @@ if (chk_data()) {
                             dataType: 'json',
                             success: function(data) {
                                 if (data['succeeded']) {
+                                    key = data['key'];
                                     $("#key").html(data['key']);
                                     $("#fileSize").html(data['file_size']);
-
-
-
-
-
+                                    $("#fURL").html(url);
+                                    intervalId = setInterval(updatePrg, 1000);            
                                 } else {
                                     $("#wait-div").hide();
                                     alert("Errore: " + data['err']);

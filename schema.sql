@@ -38,11 +38,9 @@ CREATE TABLE IF NOT EXISTS `bt_job` (
   KEY `job_id` (`job_id`),
   KEY `job_status` (`job_status`),
   KEY `id_user` (`id_user`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
--- Dump dei dati della tabella botheory_api_down.bt_job: ~1 rows (circa)
-INSERT INTO `bt_job` (`id_bt_job`, `id_user`, `job_id`, `job_status`, `creation_datetime`, `state_change_datetime`, `last_err`, `callback_extra_data`, `file_url`, `callback_url`, `callback_type`, `downloaded_size`, `file_name`, `file_ext`, `downloaded_datetime`) VALUES
-	(2, 1, '80DD260AE4A2385D108DDF2DFC8103D9', 'COMPLETED', '2023-07-26 11:33:36', '2023-07-26 11:34:46', NULL, NULL, 'https://rr1---sn-uxaxpu5ap5-ju5e.googlevideo.com/videoplayback?expire=1690392771&ei=YwTBZP6OEsPXx_AP3fWK6AM&ip=79.8.157.250&id=o-APJ9luGMpEN6albcJ8rzAgqTDeTJ0B2rRNKyvgWRiAUL&itag=18&source=youtube&requiressl=yes&mh=dV&mm=31%2C29&mn=sn-uxaxpu5ap5-ju5e%2Csn-hpa7kn7d&ms=au%2Crdu&mv=u&mvi=1&pl=27&spc=Ul2Sq-thz5eV3dgHTd_aSmPDlOgH-MZu6nQFUdNF8w&vprv=1&svpuc=1&mime=video%2Fmp4&ns=Qi2Y80nL2FbnGbeEhmC3eo0O&gir=yes&clen=67637756&ratebypass=yes&dur=1154.333&lmt=1679574147217224&mt=1690370598&fvip=1&fexp=24007246&beids=24350018&c=WEB&txp=6319224&n=kCoTT2M9qkaB6_yvdV&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Cns%2Cgir%2Cclen%2Cratebypass%2Cdur%2Clmt&sig=AOq0QJ8wRAIgWUgh2QD_jmsdlvaDVZCvCLHlt89BBvVJAWeIpQdzRA8CIH4imiV1JpezjFBQf97acgccOIPFHmZYPREm-I7Olc3b&lsparams=mh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl&lsig=AG3C_xAwRgIhAKyWDt-hZvCy5Cv-tUMrQXjGAqEk-K-tzUjXcNuxVrDZAiEA_nn08Dr9jj5nJSrQTbhXKt0UIRw9U4K9q7F0Ug4yFaw%3D', NULL, NULL, 67637756, 'videoplayback', NULL, '2023-07-26 11:34:40');
+-- Dump dei dati della tabella botheory_api_down.bt_job: ~0 rows (circa)
 
 -- Dump della struttura di tabella botheory_api_down.bt_job_downloads
 DROP TABLE IF EXISTS `bt_job_downloads`;
@@ -61,24 +59,9 @@ CREATE TABLE IF NOT EXISTS `bt_job_downloads` (
   KEY `id_bt_job_downloads` (`id_bt_job_downloads`),
   KEY `id_bt_job` (`id_bt_job`),
   KEY `download_status` (`download_status`)
-) ENGINE=InnoDB AUTO_INCREMENT=2762 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- Dump dei dati della tabella botheory_api_down.bt_job_downloads: ~0 rows (circa)
-
--- Dump della struttura di tabella botheory_api_down.bt_log
-DROP TABLE IF EXISTS `bt_log`;
-CREATE TABLE IF NOT EXISTS `bt_log` (
-  `id_bt_log` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `id_bt_job` bigint(20) unsigned DEFAULT NULL,
-  `id_bt_job_downloads` bigint(20) unsigned DEFAULT NULL,
-  `log_msg` text NOT NULL,
-  `start_datetime` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id_bt_log`) USING BTREE,
-  KEY `id_bt_job` (`id_bt_job`) USING BTREE,
-  KEY `id_bt_job_downloads` (`id_bt_job_downloads`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
-
--- Dump dei dati della tabella botheory_api_down.bt_log: ~0 rows (circa)
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;

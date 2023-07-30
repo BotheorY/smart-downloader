@@ -1,8 +1,5 @@
 <?php
 
-/*==============================================================================
-CONSTANTS
-==============================================================================*/
 defined('MAX_SIMULTANEOUS_JOBS') OR define('MAX_SIMULTANEOUS_JOBS', 10);
 defined('DFT_CHUNK_SIZE') OR define('DFT_CHUNK_SIZE', 3072000);
 //defined('DFT_CHUNK_SIZE') OR define('DFT_CHUNK_SIZE', 524288);

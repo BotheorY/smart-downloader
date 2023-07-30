@@ -75,24 +75,6 @@ function get_env_var($var_name, $raise_err = true) {
 
 }
 
-function db_admin_connect(): ?mysqli {
-
-    global $conn_admin;
-
-    $db_name = get_env_var('BT_API_DB_NAME');
-    $db_password = get_env_var('BT_API_DB_PWD');
-    $db_host = get_env_var('BT_API_DB_HOST');
-    $db_user = get_env_var('BT_API_DB_USER');
-    $conn_admin = new mysqli($db_host, $db_user, $db_password, $db_name);
-    if ($conn_admin->connect_error) {
-        throw new Exception("Connection to database failed: " . $conn_admin->connect_error);
-    } else {
-        return $conn_admin;
-    }
-    return null;    
-    
-}
-
 function get_max_execution_time(): int {
 
     $max_execution_time = (int)ini_get('max_execution_time');
@@ -106,6 +88,20 @@ function get_max_execution_time(): int {
 
 function chk_api_token($api_token) {
     
+    global $conn_admin;
+
+    if ($conn_admin === null) {
+        $db_name = get_env_var('BT_API_DB_NAME');
+        $db_password = get_env_var('BT_API_DB_PWD');
+        $db_host = get_env_var('BT_API_DB_HOST');
+        $db_user = get_env_var('BT_API_DB_USER');
+        $conn_admin = new mysqli($db_host, $db_user, $db_password, $db_name);
+    
+        if ($conn_admin->connect_error) {
+            throw new Exception("Connection to database failed: " . $conn_admin->connect_error);
+        }
+    }
+
     $result = false;
     $curr_time_stamp = time();
     $token_parts = explode('_', $api_token);
@@ -114,23 +110,18 @@ function chk_api_token($api_token) {
     if (($time_stamp >= ($curr_time_stamp - API_TOKEN_TIMESTAMP_SPAN)) && ($time_stamp <= ($curr_time_stamp + API_TOKEN_TIMESTAMP_SPAN))) {
         $user_key = $token_parts[1];
         $sql = "SELECT id_sys_user, api_token FROM sys_user WHERE user_key = '$user_key'";
-        $db = db_admin_connect();
-        if ($db) {
-            try {
-                $user_token = null;
-                $queryres = $db->query($sql);
-                if ($queryres->num_rows > 0) {
-                    while($row = $queryres->fetch_assoc()) {
-                        $result = (int)$row["id_sys_user"];
-                        $user_token = $row["api_token"];
-                    }
-                    $test_token = get_token($user_key, $user_token, $time_stamp);
-                    if ($test_token !== $api_token)
-                        $result = false;
-                }
-            } finally {
-                $db->close();
-            }
+        if ($conn_admin) {
+			$user_token = null;
+			$queryres = $conn_admin->query($sql);
+			if ($queryres->num_rows > 0) {
+				while($row = $queryres->fetch_assoc()) {
+					$result = (int)$row["id_sys_user"];
+					$user_token = $row["api_token"];
+				}
+				$test_token = get_token($user_key, $user_token, $time_stamp);
+				if ($test_token !== $api_token)
+					$result = false;
+			}
         } else {
             throw new Exception("API DB connection failed");
         }
@@ -261,9 +252,6 @@ function download_file(string $url, string $file_pathname, ?string &$err = null,
             $lenght = abs($lenght);
         if (($lenght === null) || ($lenght > 0)) {
             $context = null;
-
-//sleep(5);
-
             if ($start_pos || $lenght) {
                 $h = get_headers($url, 1);
                 if ($h === false)
