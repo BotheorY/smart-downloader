@@ -174,6 +174,7 @@ function create_download(array $data): bool {
 				$max_downloads = (int)$data['max_threads'];
 			if ($max_downloads > MAX_JOB_DOWNLOADS)
 				$max_downloads = MAX_JOB_DOWNLOADS;
+			$file_size = null;
 			if (!empty($data['file_size']))
 				$file_size = (int)$data['file_size'];
 			if ($file_size) {
@@ -225,6 +226,8 @@ function do_download(int $id_download, array $data) {
         if (!$download_data)
             return false;
         $job_data = get_job_data($download_data['id_bt_job']);
+        if (!$job_data)
+            return false;
         $url = $job_data['file_url'];
         $index = $download_data['part_index'];
         $down_start_pos = null;

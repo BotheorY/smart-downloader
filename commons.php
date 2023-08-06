@@ -86,41 +86,46 @@ function update_job(int $id, array $data) {
 
     if (array_key_exists('job_status', $data)) {
         $data['state_change_datetime'] = $sql_datetime;
-        switch ($data['job_status']) {
-            case 'FAILED':
-                $job_data = get_job_data($id);
-                if ($job_data) {
-                    $cbck_data =     [
-                        'msg' => "Download failed at " . get_mysql_datetime(), 
-                        'key' => $job_data['job_id'], 
-                        'url' => $job_data['file_url'], 
-                        'creation_datetime' => $job_data['creation_datetime'], 
-                        'err' => $job_data['last_err'], 
-                        'ext' => $job_data['file_ext'], 
-                        'file_name' => $job_data['file_name']
-                    ];
-                    send_callback($id, $cbck_data);
-                }            
-                break;
-            case 'COMPLETED':
-                $job_data = get_job_data($id);
-                if ($job_data) {
-                    $download_url = get_download_fld_url() . "/{$job_data['job_id']}";
-                    if ($job_data['file_ext'])
-                        $download_url .= '.' . $job_data['file_ext'];
-                    $cbck_data =     [
-                        'msg' => "Download completed at " . get_mysql_datetime(), 
-                        'key' => $job_data['job_id'], 
-                        'url' => $job_data['file_url'], 
-                        'download_url' => $download_url, 
-                        'creation_datetime' => $job_data['creation_datetime'], 
-                        'err' => $job_data['last_err'], 
-                        'ext' => $job_data['file_ext'], 
-                        'file_name' => $job_data['file_name']
-                    ];
-                    send_callback($id, $cbck_data);
-                }            
-                break;
+        try {
+            switch ($data['job_status']) {
+                case 'FAILED':
+                    $job_data = get_job_data($id);
+                    if ($job_data) {
+                        $cbck_data =     [
+                            'msg' => "Download failed at " . get_mysql_datetime(), 
+                            'key' => $job_data['job_id'], 
+                            'url' => $job_data['file_url'], 
+                            'creation_datetime' => $job_data['creation_datetime'], 
+                            'err' => $job_data['last_err'], 
+                            'ext' => $job_data['file_ext'], 
+                            'file_name' => $job_data['file_name']
+                        ];
+                        send_callback($id, $cbck_data);
+                    }            
+                    break;
+                case 'COMPLETED':
+                    $job_data = get_job_data($id);
+                    if ($job_data) {
+                        $download_url = get_download_fld_url() . "/{$job_data['job_id']}";
+                        if ($job_data['file_ext'])
+                            $download_url .= '.' . $job_data['file_ext'];
+                        $cbck_data =     [
+                            'msg' => "Download completed at " . get_mysql_datetime(), 
+                            'key' => $job_data['job_id'], 
+                            'url' => $job_data['file_url'], 
+                            'download_url' => $download_url, 
+                            'creation_datetime' => $job_data['creation_datetime'], 
+                            'err' => $job_data['last_err'], 
+                            'ext' => $job_data['file_ext'], 
+                            'file_name' => $job_data['file_name']
+                        ];
+                        send_callback($id, $cbck_data);
+                    }            
+                    break;
+            }    
+        } catch (Exception $e) {
+            $err = $e->getMessage();
+            update_job($id, ['last_err' => $err]);
         }
     }
     
@@ -340,9 +345,39 @@ function send_callback(int $id_job, ?array $data = null) {
                 $data = [];
             $extra_data = $job_data['callback_extra_data'];
             if ($extra_data) {
-                $extra_data = json_decode($extra_data, true);
-                if (empty($extra_data))
+                $extra_data = json_decode($extra_data, true, 512, JSON_INVALID_UTF8_SUBSTITUTE);
+                if (empty($extra_data)) {
                     $extra_data = [];
+                    $js_errcode = json_last_error();
+                    $js_errmsg = '';
+                    switch ($js_errcode) {
+                        case JSON_ERROR_DEPTH:
+                            $js_errmsg .= 'Maximum stack depth exceeded';
+                        break;
+                        case JSON_ERROR_STATE_MISMATCH:
+                            $js_errmsg .= 'Underflow or the modes mismatch';
+                        break;
+                        case JSON_ERROR_CTRL_CHAR:
+                            $js_errmsg .= 'Unexpected control character found';
+                        break;
+                        case JSON_ERROR_SYNTAX:
+                            $js_errmsg .= 'Syntax error, malformed JSON';
+                        break;
+                        case JSON_ERROR_UTF8:
+                            $js_errmsg .= 'Malformed UTF-8 characters, possibly incorrectly encoded';
+                        break;
+                        case JSON_ERROR_INVALID_PROPERTY_NAME:
+                            $js_errmsg .= 'A key starting with \u0000 character was in the string passed';
+                        break;
+                        case JSON_ERROR_UTF16:
+                            $js_errmsg .= 'Single unpaired UTF-16 surrogate in unicode escape contained in the JSON string passed';
+                        break;
+                    }
+                    if ($js_errmsg) {
+                        $js_errmsg = "[$js_errmsg] " . json_last_error_msg();
+                        throw new Exception("[JSON ERROR] Failed getting callback extra data: $js_errmsg");
+                    }
+                }
             } else {
                 $extra_data = [];
             }
