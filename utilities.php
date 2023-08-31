@@ -217,12 +217,36 @@ function get_file_size(string $url, ?string &$ext = null): ?int {
         $headers = get_headers($url, 1);
         if ($headers !== false) {
             if (isset($headers['Content-Type'])) {
-                $res = explode('/', $headers['Content-Type']);
-                if (is_array($res) && (count($res) > 1) && trim($res[1]))
-                    $ext = trim($res[1]);
+                if (is_array($headers['Content-Type'])) {
+                    $items = $headers['Content-Type'];
+                    foreach ($items as $item) {
+                        if (in_array($item, ['text/html'], true))
+                            continue;
+                        $res = explode('/', $item);
+                        if (is_array($res) && (count($res) > 1) && trim($res[1]))
+                            $ext = trim($res[1]);
+                    }
+                } else {
+                    $res = explode('/', $headers['Content-Type']);
+                    if (is_array($res) && (count($res) > 1) && trim($res[1]))
+                        $ext = trim($res[1]);
+                }
             }
-            if (isset($headers['Content-Length']))
-                return (int)$headers['Content-Length'];
+            if (!$ext) {
+                ab_log("[GET_FILE_SIZE] Failed extracting file extension from headers: " . print_r($headers, true));
+                throw new Exception("Failed extracting file extension from headers: " . print_r($headers, true));
+            }
+            if (isset($headers['Content-Length'])) {
+                if (is_array($headers['Content-Length'])) {
+                    $items = $headers['Content-Length'];
+                    foreach ($items as $item) {
+                        if ((int)$item)
+                            return (int)$item;
+                    }
+                } else {
+                    return (int)$headers['Content-Length'];
+                }
+            }
         }
         return null;
     } catch (Exception $e) {
